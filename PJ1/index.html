@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <title>Music</title>
+        <meta charset="utf-8"/>
+        <style>
+            #canvas{
+                background: black;
+                border-bottom: 1px solid #ccc;
+            }
+        #qiuyemusic{
+            text-align: center;
+        }
+        #mp3,#swith-btn{
+            margin:0 auto;
+            margin-top: 10px;
+            width:600px;
+        }
+        #mp3{
+            border-top: 1px solid #ccc;
+        }
+        #swith-btn>span{
+            cursor:pointer;
+        }
+        .player{
+            background: black;width:600px;margin:0 auto;
+            overflow: hidden;
+        }
+        </style>
+        
+    </head>
+    
+    <body>
+        <div id="qiuyemusic">
+            <div class="player">
+                <canvas width="600" height="400" id="canvas">
+                    您的浏览器不支持canvas，请更换高级版的浏览器！
+                </canvas>
+                <br/>
+                <audio src="demo.mp3" controls="controls" autoplay="autoplay" id="mp3" crossOrigin="anonymous"></audio>
+            </div>
+            
+        </div>
+        <script>
+            (function(){
+             var canvas=document.querySelector("#canvas"),
+             context = canvas.getContext('2d');
+             var width=canvas.width,
+             height=canvas.height;
+             var audio=document.querySelector("#mp3");
+             window.AudioContext =window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
+             try {
+             var audioContext = new window.AudioContext();
+             } catch (e) {
+             throw new Error("您的浏览器不支持！");
+             }
+             var analyser = audioContext.createAnalyser(),
+             source = audioContext.createMediaElementSource(audio);
+             source.connect(analyser);//截取音频信号
+             analyser.connect(audioContext.destination);//声音连接到扬声器
+             
+             function getSource(draw){
+             if(audio.paused){
+             return false;
+             }
+             var data = new Uint8Array(analyser.frequencyBinCount);
+             analyser.getByteFrequencyData(data);//得到音频能量值
+             var playerTimeDomainData = new Uint8Array(analyser.fftSize);
+             analyser.getByteTimeDomainData(playerTimeDomainData);//得到频谱
+             var volumn = Math.max.apply(null, playerTimeDomainData) -Math.min.apply(null, playerTimeDomainData);
+             context.clearRect(0, 0, width, height);
+             drawLights(volumn);
+             }
+             
+             function drawLight(){
+             var sdeg1=35,add1=0.01,sdeg2=60,add2=-0.02;
+             function drawbright(radius,sdeg,x,y,data){
+             var edeg=sdeg+45
+             var sX=radius*Math.cos(Math.PI/180*sdeg),sY=radius*Math.sin(Math.PI/180*sdeg),
+             eX=radius*Math.cos(Math.PI/180*edeg),eY=radius*Math.sin(Math.PI/180*edeg);
+             context.beginPath();
+             gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+             gradient.addColorStop(0.2, 'rgba(255,255,255,1)');
+             gradient.addColorStop(1, 'rgba(0,0,0,0)');
+             context.fillStyle=gradient;
+             context.globalAlpha=0.7+data/1000;
+             context.arc(x,y,radius,Math.PI/180*sdeg,Math.PI/180*edeg,false);
+             context.moveTo(x,y);
+             context.lineTo(sX+x,sY+y);
+             context.lineTo(eX+x,eY+y);
+             context.lineTo(x,y);
+             context.fill();
+             context.closePath();
+             if(sdeg1>=90){
+             add1=-0.01;
+             }else if(sdeg1<=60){
+             add1=0.01;
+             }
+             if(sdeg2>=90){
+             add2=-0.02;
+             }else if(sdeg2<=30){
+             add2=0.02;
+             }
+             sdeg1+=add1;
+             sdeg2+=add2;
+             }
+             return function(data){
+             if(data>230){
+             return false;
+             }
+             drawbright(400,sdeg1,200,-20,data);
+             drawbright(400,sdeg2,width-200,-20,data);
+             }
+             }
+             
+             
+             var drawLights,timer;
+             function init(){
+             drawLights=drawLight();
+            
+             timer=setInterval(function(){getSource(1)},10);
+             }
+             init();
+             })();
+            </script>
+        
+    </body>
+</html>
